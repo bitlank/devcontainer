@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
-BASE_IMAGE="devcontainer"
+BASE_IMAGE="ghcr.io/bitlank/devcontainer:latest"
 
 NETWORK="devcontainer-net"
 DIND="devcontainer-dind"
@@ -69,11 +69,11 @@ USES_DEVCONTAINER=false
 if [ "$FORCE_BASE" = false ] && [ -f "$DIR/Dockerfile" ]; then
   CONTAINER="dev-${BASENAME}"
   # Project has its own Dockerfile
-  if grep -q "^FROM devcontainer" "$DIR/Dockerfile"; then
-    # Child of devcontainer — build base first
+  if grep -q "^FROM.*ghcr\.io/bitlank/devcontainer" "$DIR/Dockerfile"; then
+    # Child of devcontainer — pull base first
     USES_DEVCONTAINER=true
     if [ "$BUILD" = true ] || ! docker image inspect "$BASE_IMAGE" >/dev/null 2>&1; then
-      docker build -t "$BASE_IMAGE" "$SCRIPT_DIR"
+      docker pull "$BASE_IMAGE"
     fi
   fi
   IMAGE="dev-${BASENAME}"
@@ -86,7 +86,7 @@ else
   USES_DEVCONTAINER=true
   IMAGE="$BASE_IMAGE"
   if [ "$BUILD" = true ] || ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-    docker build -t "$IMAGE" "$SCRIPT_DIR"
+    docker pull "$IMAGE"
   fi
 fi
 
