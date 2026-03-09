@@ -17,4 +17,4 @@ if [ "$UPDATE" = true ] || [ ! -f "$SCRIPT" ]; then
   chmod +x "$SCRIPT"
 fi
 
-exec "$SCRIPT" "$@"
+exec "$SCRIPT" --workspace "$DIR" "$@"

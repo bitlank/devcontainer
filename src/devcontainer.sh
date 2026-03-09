@@ -11,11 +11,12 @@ DOCKER_ARGS=()
 
 usage() {
   cat <<EOF
-Usage: $(basename "$0") [OPTIONS] [-] [DIR] [COMMAND...]
+Usage: $(basename "$0") [OPTIONS] [COMMAND...]
 
 Launch a dev container for a project directory.
 
 Options:
+  -w, --workspace DIR  Project directory to mount (default: current directory)
   --build              Force rebuild of the container image(s)
   --mount MOUNT        Pass a --mount argument to docker run
   -v, --volume VOL     Pass a --volume argument to docker run
@@ -24,19 +25,21 @@ Options:
   -h, --help           Show this help message
 
 Arguments:
-  DIR                  Project directory to mount (default: current directory)
   COMMAND...           Command to run inside the container (default: interactive shell)
 
-If DIR contains a Dockerfile that extends the devcontainer base image, a layered
-child image is built automatically. Otherwise the base devcontainer image is used.
+If the workspace contains a Dockerfile that extends the devcontainer base image,
+a layered child image is built automatically. Otherwise the base devcontainer
+image is used.
 EOF
 }
 
 # Parse flags
 FORCE_BASE=false
+WORKSPACE="."
 while [[ "${1:-}" == --* || "${1:-}" == -?* ]]; do
   case "$1" in
     -h|--help) usage; exit 0 ;;
+    -w|--workspace) WORKSPACE="$2"; shift 2 ;;
     --base) FORCE_BASE=true; shift ;;
     --build) BUILD=true; shift ;;
     --mount) DOCKER_ARGS+=(--mount "$2"); shift 2 ;;
@@ -46,20 +49,11 @@ while [[ "${1:-}" == --* || "${1:-}" == -?* ]]; do
   esac
 done
 
-if [[ $# -gt 0 && -d "$1" ]]; then
-  DIR="$(cd "$1" && pwd)"
-  shift
-elif [[ $# -gt 0 && ! -d "$1" && ! -f "$1" ]]; then
-  # First arg is not a directory and not a file — could be a command
-  # Only treat as "dir missing" if it looks like a path
-  if [[ "$1" == */* ]]; then
-    echo "Error: directory '$1' does not exist" >&2
-    exit 1
-  fi
-  DIR="$(pwd)"
-else
-  DIR="$(pwd)"
+if [[ ! -d "$WORKSPACE" ]]; then
+  echo "Error: workspace directory '$WORKSPACE' does not exist" >&2
+  exit 1
 fi
+DIR="$(cd "$WORKSPACE" && pwd)"
 
 BASENAME="$(basename "$DIR")"
 USES_DEVCONTAINER=false
