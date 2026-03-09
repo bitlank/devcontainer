@@ -35,11 +35,16 @@ EOF
 
 # Parse flags
 FORCE_BASE=false
-WORKSPACE="."
+WORKSPACE=""
 while [[ "${1:-}" == --* || "${1:-}" == -?* ]]; do
   case "$1" in
     -h|--help) usage; exit 0 ;;
-    -w|--workspace) WORKSPACE="$2"; shift 2 ;;
+    -w|--workspace)
+      if [ -n "$WORKSPACE" ]; then
+        echo "Error: --workspace specified more than once" >&2
+        exit 1
+      fi
+      WORKSPACE="$2"; shift 2 ;;
     --base) FORCE_BASE=true; shift ;;
     --build) BUILD=true; shift ;;
     --mount) DOCKER_ARGS+=(--mount "$2"); shift 2 ;;
@@ -48,6 +53,8 @@ while [[ "${1:-}" == --* || "${1:-}" == -?* ]]; do
     *) echo "Unknown option: $1" >&2; echo >&2; usage >&2; exit 1 ;;
   esac
 done
+
+WORKSPACE="${WORKSPACE:-.}"
 
 if [[ ! -d "$WORKSPACE" ]]; then
   echo "Error: workspace directory '$WORKSPACE' does not exist" >&2
