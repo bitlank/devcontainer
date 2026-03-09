@@ -68,7 +68,7 @@ USES_DEVCONTAINER=false
 # --- Build logic ---
 
 if [ "$FORCE_BASE" = false ] && [ -f "$DIR/Dockerfile" ]; then
-  CONTAINER="dev-${BASENAME}"
+  CONTAINER="dev-${BASENAME}-$$"
   # Project has its own Dockerfile
   if grep -q "^FROM.*ghcr\.io/bitlank/devcontainer" "$DIR/Dockerfile"; then
     # Child of devcontainer — pull base first
@@ -83,7 +83,7 @@ if [ "$FORCE_BASE" = false ] && [ -f "$DIR/Dockerfile" ]; then
   fi
 else
   # No Dockerfile — use base devcontainer directly
-  CONTAINER="dev-base-${BASENAME}"
+  CONTAINER="dev-base-${BASENAME}-$$"
   USES_DEVCONTAINER=true
   IMAGE="$BASE_IMAGE"
   if [ "$BUILD" = true ] || ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
