@@ -140,14 +140,14 @@ fi
 # --- Run ---
 
 if [ $# -eq 0 ]; then
-  docker run -it --rm \
+  docker run -it --rm --init \
     --name "$CONTAINER" \
     "${DOCKER_ARGS[@]}" \
     "$IMAGE"
 else
   TTY_FLAGS="-i"
   [ -t 0 ] && TTY_FLAGS="-it"
-  docker run $TTY_FLAGS --rm \
+  docker run $TTY_FLAGS --rm --init \
     --name "$CONTAINER" \
     "${DOCKER_ARGS[@]}" \
     "$IMAGE" \
