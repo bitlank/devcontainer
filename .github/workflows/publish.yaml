@@ -31,4 +31,4 @@ jobs:
         with:
           files: |
             src/devcontainer.sh
-            src/dev.sh
+            dev.sh
