@@ -21,6 +21,8 @@ Options:
   --mount MOUNT        Pass a --mount argument to docker run
   -v, --volume VOL     Pass a --volume argument to docker run
   -p, --publish PORT   Pass a --publish argument to docker run
+  -e, --env KEY=VAL    Pass an environment variable to the container
+  --env-file FILE      Pass an env file to the container
   --base               Force use of the base devcontainer image (ignore project Dockerfile)
   -h, --help           Show this help message
 
@@ -50,6 +52,8 @@ while [[ "${1:-}" == --* || "${1:-}" == -?* ]]; do
     --mount) DOCKER_ARGS+=(--mount "$2"); shift 2 ;;
     -v|--volume) DOCKER_ARGS+=(--volume "$2"); shift 2 ;;
     -p|--publish) DOCKER_ARGS+=(--publish "$2"); shift 2 ;;
+    -e|--env) DOCKER_ARGS+=(--env "$2"); shift 2 ;;
+    --env-file) DOCKER_ARGS+=(--env-file "$2"); shift 2 ;;
     *) echo "Unknown option: $1" >&2; echo >&2; usage >&2; exit 1 ;;
   esac
 done
@@ -109,6 +113,7 @@ if [ "$USES_DEVCONTAINER" = true ]; then
 fi
 
 [ -f "$HOME/.gitconfig" ] && DOCKER_ARGS+=(--volume "$HOME/.gitconfig:/home/dev/.gitconfig:ro")
+[ -f "$DEV_DIR/.env" ] && DOCKER_ARGS+=(--env-file "$DEV_DIR/.env")
 
 # --- DinD (only for devcontainer-based images) ---
 
