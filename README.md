@@ -43,9 +43,15 @@ RUN apt-get update && apt-get install -y <packages> \
 Flags are passed through `dev.sh` to the underlying `devcontainer.sh`:
 
 ```
---build             Force rebuild / re-pull images
---base              Ignore project Dockerfile, use base image
---mount MOUNT       Pass a --mount to docker run
--v, --volume VOL    Pass a --volume to docker run
--p, --publish PORT  Pass a --publish to docker run
+-w, --workspace DIR  Project directory to mount (default: current directory)
+--build              Force rebuild of the container image(s)
+--mount MOUNT        Pass a --mount argument to docker run
+-v, --volume VOL     Pass a --volume argument to docker run
+-p, --publish PORT   Pass a --publish argument to docker run
+-e, --env KEY=VAL    Pass an environment variable to the container
+--env-file FILE      Pass an env file to the container
+--base               Force use of the base devcontainer image (ignore project Dockerfile)
+
 ```
+## Environment
+variables in .dev/.env are always passed to docker.
