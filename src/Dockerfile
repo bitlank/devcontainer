@@ -1,5 +1,6 @@
 FROM ubuntu:24.04
 
+# System packages
 RUN apt-get update && apt-get install -y \
     unzip curl git sudo ca-certificates gnupg lsb-release \
     python3 python3-pip python3-venv \
@@ -7,7 +8,7 @@ RUN apt-get update && apt-get install -y \
     openssh-client bash-completion \
     && rm -rf /var/lib/apt/lists/*
 
-# Node.js 22.x LTS
+# Node.js 22
 RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
        | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
     && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
@@ -25,10 +26,14 @@ RUN install -m 0755 -d /etc/apt/keyrings \
     && apt-get update && apt-get install -y docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
-# Claude Code CLI
+# uv (Python package runner, like npx for Python)
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uvx /usr/local/bin/uvx
+
+# Claude Code
 RUN npm install -g @anthropic-ai/claude-code@latest
 
-# Dev user (same in all containers)
+# User
 RUN useradd -m -s /bin/bash dev \
     && usermod -aG sudo dev \
     && echo "dev ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
