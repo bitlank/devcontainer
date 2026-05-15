@@ -35,11 +35,14 @@ Arguments:
 
 Project customization (under .dev/ in the workspace):
   .dev/Dockerfile      Optional Dockerfile extending the base image
-  .dev/volumes         Optional list of -v values, one per line (# for comments)
-  .dev/ports           Optional list of -p values, one per line (# for comments)
-  .dev/env             Optional env file passed to docker
-  .dev/state/          Per-user state (claude config, bash history) — gitignore
-  .dev/version         Layout schema version (managed automatically)
+  .dev/volumes         List of -v values, one per line. Auto-generated with
+                       sensible defaults on first run. Leading ~/ expands to
+                       \$HOME, leading ./ expands to the project root. Host
+                       paths that don't exist are silently skipped.
+  .dev/ports           Optional list of -p values, one per line.
+  .dev/env             Optional env file passed to docker.
+  .dev/state/          Per-user state (claude config, bash history) — gitignore.
+  .dev/version         Layout schema version (managed automatically).
 EOF
 }
 
@@ -73,6 +76,77 @@ load_lines() {
     case "$line" in ''|'#'*) continue ;; esac
     DOCKER_ARGS+=("$flag" "$line")
   done < "$file"
+}
+
+# Expand leading ~/ to $HOME and leading ./ to $DIR. Other paths returned as-is.
+# The ~/ in ${1#"~/"} is quoted so bash doesn't tilde-expand the pattern itself.
+expand_path() {
+  case "$1" in
+    "~/"*) printf '%s' "$HOME/${1#"~/"}" ;;
+    "~")   printf '%s' "$HOME" ;;
+    "./"*) printf '%s' "$DIR/${1#"./"}" ;;
+    ".")   printf '%s' "$DIR" ;;
+    *)     printf '%s' "$1" ;;
+  esac
+}
+
+# Read .dev/volumes: each line is a docker -v spec with leading ~/ and ./
+# expanded against $HOME and the project root. Missing host paths print a
+# warning and are skipped. No side effects on the filesystem.
+load_volumes() {
+  local file="$1"
+  [ -f "$file" ] || return 0
+  local line host rest
+  while IFS= read -r line; do
+    case "$line" in ''|'#'*) continue ;; esac
+    host="${line%%:*}"
+    rest="${line#*:}"
+    host="$(expand_path "$host")"
+    if [ ! -e "$host" ]; then
+      echo "warning: skipping volume (host path not found): $host" >&2
+      continue
+    fi
+    DOCKER_ARGS+=(-v "$host:$rest")
+  done < "$file"
+}
+
+# First-run setup: write the default volumes file and pre-create the state
+# paths it references. Only invoked when the project uses the devcontainer
+# base image. After this runs once, the file is the source of truth — if a
+# user deletes a state file, the corresponding mount will silently disappear
+# (delete .dev/volumes too to regenerate everything from scratch).
+ensure_default_volumes() {
+  local file="$1"
+  [ -f "$file" ] && return 0
+
+  # State items under .dev/state/ mounted at /home/dev/.
+  # Trailing / = dir, .json = JSON file, otherwise empty file.
+  local state=(.bash_history .claude/ .claude.json)
+  local item host
+
+  mkdir -p "$DEV_DIR/state"
+  cat > "$file" <<'EOF'
+# Paths starting with ~/ are expanded against $HOME.
+# Paths starting with ./ are expanded against the project root.
+
+# Devcontainer state
+EOF
+
+  for item in "${state[@]}"; do
+    host="$DEV_DIR/state/$item"
+    case "$item" in
+      */)     mkdir -p "$host" ;;
+      *.json) printf '{}' > "$host" ;;
+      *)      touch "$host" ;;
+    esac
+    printf './.dev/state/%s:/home/dev/%s\n' "$item" "${item%/}" >> "$file"
+  done
+
+  cat >> "$file" <<'EOF'
+
+# Host gitconfig (mounted read-only if present on host).
+~/.gitconfig:/home/dev/.gitconfig:ro
+EOF
 }
 
 migrate_v0_to_v1() {
@@ -138,11 +212,6 @@ USES_DEVCONTAINER=false
 
 run_migrations "$DEV_DIR"
 
-# --- Load .dev/volumes and .dev/ports ---
-
-load_lines "$DEV_DIR/volumes" -v
-load_lines "$DEV_DIR/ports" -p
-
 # --- Resolve Dockerfile ---
 
 DOCKERFILE=""
@@ -183,18 +252,14 @@ fi
 DOCKER_ARGS+=(-v "$DIR:/workspace")
 
 if [ "$USES_DEVCONTAINER" = true ]; then
-  mkdir -p "$DEV_DIR/state/.claude"
-  [ -f "$DEV_DIR/state/.claude.json" ]  || echo '{}' > "$DEV_DIR/state/.claude.json"
-  [ -f "$DEV_DIR/state/.bash_history" ] || touch "$DEV_DIR/state/.bash_history"
+  mkdir -p "$DEV_DIR"
   [ -f "$DEV_DIR/version" ] || echo "$SCHEMA_VERSION" > "$DEV_DIR/version"
-  DOCKER_ARGS+=(
-    -v "$DEV_DIR/state/.bash_history:/home/dev/.bash_history"
-    -v "$DEV_DIR/state/.claude:/home/dev/.claude"
-    -v "$DEV_DIR/state/.claude.json:/home/dev/.claude.json"
-  )
+  ensure_default_volumes "$DEV_DIR/volumes"
 fi
 
-[ -f "$HOME/.gitconfig" ] && DOCKER_ARGS+=(--volume "$HOME/.gitconfig:/home/dev/.gitconfig:ro")
+load_volumes "$DEV_DIR/volumes"
+load_lines  "$DEV_DIR/ports" -p
+
 [ -f "$DEV_DIR/env" ] && DOCKER_ARGS+=(--env-file "$DEV_DIR/env")
 
 # --- DinD (only for devcontainer-based images) ---

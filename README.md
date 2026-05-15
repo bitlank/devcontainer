@@ -53,35 +53,25 @@ RUN apt-get update && apt-get install -y <packages> \
 
 `dev.sh` detects it and builds a layered child image. Build context is the project root, so `COPY` paths are relative to it.
 
-### `.dev/volumes` and `.dev/ports`
+### `.dev/volumes`
 
-One value per line. Lines starting with `#` and blank lines are ignored. Each line becomes a `-v` or `-p` argument to `docker run`.
+One docker `-v` value per line; `#` for comments. Auto-generated on first run with state mounts and `~/.gitconfig`. Edit or comment out lines as needed.
 
-`.dev/volumes`:
+Leading `~/` expands to `$HOME`, leading `./` to the project root. Missing host paths print a warning and are skipped.
+
 ```
-# AWS creds
-/home/me/.aws:/home/dev/.aws:ro
-
-# Project data
+./.dev/state/.bash_history:/home/dev/.bash_history
+~/.gitconfig:/home/dev/.gitconfig:ro
 /var/data:/data
 ```
 
-`.dev/ports`:
-```
-3000
-8080
-5432
-```
+### `.dev/ports`, `.dev/env`
 
-CLI flags are additive — `dev.sh -p 9000` adds 9000 on top of whatever is in `.dev/ports`. For advanced cases (`--mount type=...`, individual `-e VAR=val`), use the CLI directly or put them in `.dev/env`.
-
-### `.dev/env`
-
-Env file passed to docker via `--env-file`. Always loaded if present.
+`.dev/ports`: one `-p` value per line. `.dev/env`: docker env-file format. Both optional; CLI flags add on top of file contents.
 
 ### `.dev/state/`
 
-Per-user state mounted into the container (`~/.claude`, `~/.claude.json`, `~/.bash_history`). Don't commit this.
+Per-user state mounted into the container. Don't commit.
 
 ## Gitignore
 
