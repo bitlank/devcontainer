@@ -4,7 +4,8 @@ FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y \
     unzip curl git sudo ca-certificates gnupg lsb-release \
     python3 python3-pip python3-venv \
-    ripgrep jq vim \
+    ripgrep jq vim file \
+    netcat-openbsd dnsutils \
     openssh-client bash-completion \
     && rm -rf /var/lib/apt/lists/*
 
