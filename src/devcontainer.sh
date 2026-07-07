@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 BASE_IMAGE="ghcr.io/bitlank/devcontainer:latest"
 SCHEMA_VERSION=1
 
@@ -81,6 +80,7 @@ load_lines() {
 # Expand leading ~/ to $HOME and leading ./ to $DIR. Other paths returned as-is.
 # The ~/ in ${1#"~/"} is quoted so bash doesn't tilde-expand the pattern itself.
 expand_path() {
+  # shellcheck disable=SC2088  # literal ~ in patterns is intentional — we detect and expand manually
   case "$1" in
     "~/"*) printf '%s' "$HOME/${1#"~/"}" ;;
     "~")   printf '%s' "$HOME" ;;
