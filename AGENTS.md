@@ -17,4 +17,4 @@ Base devcontainer image + launcher scripts, published to GHCR and GitHub Release
 
 ## dind sidecar
 
-Launcher lazily starts a shared `devcontainer-dind` container (volume `devcontainer-dind-storage`) and tears it down when the last `dev-*` container exits. On cold start it backgrounds `docker system prune -af --volumes --filter "until=24h"` — the 24h filter avoids racing concurrent `docker pull`s.
+Launcher lazily starts a shared `devcontainer-dind` container (volume `devcontainer-dind-storage`) and tears it down when the last `dev-*` container exits. Cold start backgrounds `docker system prune -af --filter "until=24h"` then `docker volume prune -af` (kept separate — Docker rejects `until=…` combined with `--volumes`).

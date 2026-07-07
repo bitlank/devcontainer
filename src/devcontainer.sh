@@ -281,7 +281,8 @@ if [ "$USES_DEVCONTAINER" = true ]; then
         docker exec "$DIND" docker info >/dev/null 2>&1 && break
         sleep 1
       done
-      docker exec "$DIND" docker system prune -af --volumes --filter "until=24h" >/dev/null 2>&1
+      docker exec "$DIND" docker system prune -af --filter "until=24h" >/dev/null
+      docker exec "$DIND" docker volume prune -af >/dev/null
     ) &
   fi
 
