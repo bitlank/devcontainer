@@ -275,6 +275,14 @@ if [ "$USES_DEVCONTAINER" = true ]; then
       -e DOCKER_TLS_CERTDIR="" \
       -v devcontainer-dind-storage:/var/lib/docker \
       docker:dind
+
+    (
+      for _ in $(seq 1 30); do
+        docker exec "$DIND" docker info >/dev/null 2>&1 && break
+        sleep 1
+      done
+      docker exec "$DIND" docker system prune -af --volumes --filter "until=24h" >/dev/null 2>&1
+    ) &
   fi
 
   cleanup() {
