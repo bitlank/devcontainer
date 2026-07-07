@@ -39,6 +39,9 @@ RUN useradd -m -s /bin/bash dev \
     && usermod -aG sudo dev \
     && echo "dev ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
+# Silence Docker CLI "What's next" hints
+ENV DOCKER_CLI_HINTS=false
+
 WORKDIR /workspace
 USER dev
 

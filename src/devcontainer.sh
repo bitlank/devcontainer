@@ -4,6 +4,9 @@ set -euo pipefail
 BASE_IMAGE="ghcr.io/bitlank/devcontainer:latest"
 SCHEMA_VERSION=1
 
+# Silence Docker CLI "What's next" hints for commands this launcher runs.
+export DOCKER_CLI_HINTS=false
+
 NETWORK="devcontainer-net"
 DIND="devcontainer-dind"
 BUILD=false
