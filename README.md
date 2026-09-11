@@ -1,6 +1,6 @@
 # devcontainer
 
-Docker-based dev environment with Claude Code, Node.js, Python, and Docker-in-Docker.
+Docker-based dev environment with Claude Code, Cursor Agent, Node.js, Python, and Docker-in-Docker.
 
 ## Quick start
 
@@ -35,7 +35,7 @@ All customization lives in `.dev/` inside your project. Nothing in the project r
   volumes           # optional, one -v value per line
   ports             # optional, one -p value per line
   env               # optional, env file passed to docker
-  state/            # per-user state (claude config, bash history) — gitignore
+  state/            # per-user state (claude/cursor config, bash history) — gitignore
   version           # layout schema version (managed automatically)
   devcontainer.sh   # downloaded by dev.sh — gitignore
 ```

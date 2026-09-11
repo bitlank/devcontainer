@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BASE_IMAGE="ghcr.io/bitlank/devcontainer:latest"
-SCHEMA_VERSION=1
+SCHEMA_VERSION=2
 
 # Silence Docker CLI "What's next" hints for commands this launcher runs.
 export DOCKER_CLI_HINTS=false
@@ -43,7 +43,7 @@ Project customization (under .dev/ in the workspace):
                        paths that don't exist are silently skipped.
   .dev/ports           Optional list of -p values, one per line.
   .dev/env             Optional env file passed to docker.
-  .dev/state/          Per-user state (claude config, bash history) — gitignore.
+  .dev/state/          Per-user state (claude/cursor config, bash history) — gitignore.
   .dev/version         Layout schema version (managed automatically).
 EOF
 }
@@ -124,7 +124,7 @@ ensure_default_volumes() {
 
   # State items under .dev/state/ mounted at /home/dev/.
   # Trailing / = dir, .json = JSON file, otherwise empty file.
-  local state=(.bash_history .claude/ .claude.json)
+  local state=(.bash_history .claude/ .claude.json .cursor/)
   local item host
 
   mkdir -p "$DEV_DIR/state"
@@ -177,6 +177,23 @@ migrate_v0_to_v1() {
   fi
 }
 
+# Add Cursor Agent state mount for projects that already have .dev/volumes.
+migrate_v1_to_v2() {
+  local dev_dir="$1"
+  local volumes="$dev_dir/volumes"
+  local cursor_state="$dev_dir/state/.cursor"
+  local mount='./.dev/state/.cursor:/home/dev/.cursor'
+
+  mkdir -p "$cursor_state"
+
+  [ -f "$volumes" ] || return 0
+  if grep -qF '.cursor:/home/dev/.cursor' "$volumes" 2>/dev/null; then
+    return 0
+  fi
+  printf '\n# Cursor Agent state\n%s\n' "$mount" >> "$volumes"
+  echo "Added Cursor Agent state mount to $volumes" >&2
+}
+
 run_migrations() {
   local dev_dir="$1"
   local current
@@ -190,6 +207,7 @@ run_migrations() {
   while [ "$current" -lt "$SCHEMA_VERSION" ]; do
     case "$current" in
       0) migrate_v0_to_v1 "$dev_dir" ;;
+      1) migrate_v1_to_v2 "$dev_dir" ;;
     esac
     current=$((current + 1))
     echo "$current" > "$dev_dir/version"

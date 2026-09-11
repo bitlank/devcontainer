@@ -45,9 +45,16 @@ ENV DOCKER_CLI_HINTS=false
 WORKDIR /workspace
 USER dev
 
+# Cursor Agent CLI (installs to ~/.local; file store — no keychain in containers)
+ENV PATH="/home/dev/.local/bin:${PATH}"
+ENV AGENT_CLI_CREDENTIAL_STORE=file
+RUN curl -fsSL https://cursor.com/install | bash \
+    && agent --version
+
 # Bash config (history file bind-mounted by devcontainer.sh)
 RUN { \
       echo '[ -f /etc/bash_completion ] && source /etc/bash_completion'; \
+      echo 'export PATH="$HOME/.local/bin:$PATH"'; \
       echo 'HISTSIZE=10000'; \
       echo 'HISTFILESIZE=20000'; \
       echo 'shopt -s histappend'; \

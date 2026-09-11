@@ -4,7 +4,7 @@ Base devcontainer image + launcher scripts, published to GHCR and GitHub Release
 
 ## Layout
 
-- `src/Dockerfile` — base image (`ghcr.io/bitlank/devcontainer:latest`): Ubuntu 24.04, Node 22, Python + uv, Docker CLI, Claude Code.
+- `src/Dockerfile` — base image (`ghcr.io/bitlank/devcontainer:latest`): Ubuntu 24.04, Node 22, Python + uv, Docker CLI, Claude Code, Cursor Agent CLI.
 - `src/devcontainer.sh` — launcher that runs the image with a Docker-in-Docker sidecar. **Source of truth for the launcher.**
 - `dev.sh` — thin bootstrap users curl into their project; downloads the latest `devcontainer.sh` release into `.dev/devcontainer.sh` and execs it.
 - `.github/workflows/publish.yaml` — on tag `v*`: builds `src/` for linux/amd64+arm64, pushes to ghcr.io, attaches `src/devcontainer.sh` + `dev.sh` as release assets. No local build/test pipeline — publishing is tag-driven.
