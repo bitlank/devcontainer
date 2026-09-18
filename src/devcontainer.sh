@@ -113,6 +113,25 @@ load_volumes() {
   done < "$file"
 }
 
+# Default per-user state under .dev/state/ (trailing / = dir, *.json = {}, else file).
+STATE_ITEMS=(.bash_history .claude/ .claude.json .cursor/)
+
+# Create any missing default state paths. Safe to call when .dev/volumes already
+# exists (e.g. committed by the team while .dev/state/ is gitignored).
+ensure_state_paths() {
+  local item host
+  mkdir -p "$DEV_DIR/state"
+  for item in "${STATE_ITEMS[@]}"; do
+    host="$DEV_DIR/state/$item"
+    [ -e "$host" ] && continue
+    case "$item" in
+      */)     mkdir -p "$host" ;;
+      *.json) printf '{}' > "$host" ;;
+      *)      touch "$host" ;;
+    esac
+  done
+}
+
 # First-run setup: write the default volumes file and pre-create the state
 # paths it references. Only invoked when the project uses the devcontainer
 # base image. After this runs once, the file is the source of truth — if a
@@ -120,14 +139,11 @@ load_volumes() {
 # (delete .dev/volumes too to regenerate everything from scratch).
 ensure_default_volumes() {
   local file="$1"
+  local item
+
+  ensure_state_paths
   [ -f "$file" ] && return 0
 
-  # State items under .dev/state/ mounted at /home/dev/.
-  # Trailing / = dir, .json = JSON file, otherwise empty file.
-  local state=(.bash_history .claude/ .claude.json .cursor/)
-  local item host
-
-  mkdir -p "$DEV_DIR/state"
   cat > "$file" <<'EOF'
 # Paths starting with ~/ are expanded against $HOME.
 # Paths starting with ./ are expanded against the project root.
@@ -135,13 +151,7 @@ ensure_default_volumes() {
 # Devcontainer state
 EOF
 
-  for item in "${state[@]}"; do
-    host="$DEV_DIR/state/$item"
-    case "$item" in
-      */)     mkdir -p "$host" ;;
-      *.json) printf '{}' > "$host" ;;
-      *)      touch "$host" ;;
-    esac
+  for item in "${STATE_ITEMS[@]}"; do
     printf './.dev/state/%s:/home/dev/%s\n' "$item" "${item%/}" >> "$file"
   done
 
