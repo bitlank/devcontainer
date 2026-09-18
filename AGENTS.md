@@ -4,8 +4,9 @@ Base devcontainer image + launcher scripts, published to GHCR and GitHub Release
 
 ## Layout
 
-- `src/Dockerfile` — base image (`ghcr.io/bitlank/devcontainer:latest`): Ubuntu 24.04, Node 22, Python + uv, Docker CLI, Claude Code, Cursor Agent CLI.
-- `src/devcontainer.sh` — launcher that runs the image with a Docker-in-Docker sidecar. **Source of truth for the launcher.**
+- `src/Dockerfile` — base image (`ghcr.io/bitlank/devcontainer:latest`): Ubuntu 24.04, Node 22, Python + uv, Docker CLI, Claude Code, Cursor Agent CLI. Lean `dev` user (UID 1000 + sudo); starts as root via entrypoint.
+- `src/dev-entrypoint.sh` — remaps `dev` to `HOST_UID`/`HOST_GID` (groupmod only when GID free), `chown -xdev` on `/home/dev`, then `exec runuser -u dev`.
+- `src/devcontainer.sh` — launcher that runs the image with a Docker-in-Docker sidecar. **Source of truth for the launcher.** Passes `HOST_UID`/`HOST_GID` from the host.
 - `dev.sh` — thin bootstrap users curl into their project; downloads the latest `devcontainer.sh` release into `.dev/devcontainer.sh` and execs it.
 - `.github/workflows/publish.yaml` — on tag `v*`: builds `src/` for linux/amd64+arm64, pushes to ghcr.io, attaches `src/devcontainer.sh` + `dev.sh` as release assets. No local build/test pipeline — publishing is tag-driven.
 - `README.md` — user-facing docs for `.dev/` project customization (volumes/ports/env/Dockerfile). Read it before changing user-facing behavior.

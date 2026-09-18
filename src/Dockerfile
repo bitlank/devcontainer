@@ -34,9 +34,12 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uvx /usr/local/bin/uvx
 # Claude Code
 RUN npm install -g @anthropic-ai/claude-code@latest
 
-# User
-RUN useradd -m -s /bin/bash dev \
-    && usermod -aG sudo dev \
+# Lean `dev` user (UID/GID 1000, sudo only). Entrypoint remaps to the host
+# UID/GID at start so bind-mounted project/state dirs are writable.
+RUN userdel -r ubuntu || true \
+    && groupdel ubuntu || true \
+    && groupadd -g 1000 dev \
+    && useradd -m -u 1000 -g 1000 -G sudo -s /bin/bash dev \
     && echo "dev ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 # Silence Docker CLI "What's next" hints
@@ -59,3 +62,10 @@ RUN { \
       echo 'HISTFILESIZE=20000'; \
       echo 'shopt -s histappend'; \
     } > /home/dev/.bashrc
+
+# Entrypoint runs as root, remaps `dev`, then exec's the user command.
+USER root
+COPY dev-entrypoint.sh /usr/local/bin/dev-entrypoint.sh
+RUN chmod +x /usr/local/bin/dev-entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/dev-entrypoint.sh"]
+CMD ["bash"]

@@ -321,6 +321,9 @@ fi
 
 # --- Run ---
 
+# Entrypoint remaps the image `dev` user to these IDs so bind mounts are writable.
+DOCKER_ARGS+=(-e "HOST_UID=$(id -u)" -e "HOST_GID=$(id -g)")
+
 TTY_FLAGS="-i"
 [ -t 0 ] && TTY_FLAGS="-it"
 
