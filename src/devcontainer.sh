@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BASE_IMAGE="ghcr.io/bitlank/devcontainer:latest"
-SCHEMA_VERSION=2
+SCHEMA_VERSION=3
 
 # Silence Docker CLI "What's next" hints for commands this launcher runs.
 export DOCKER_CLI_HINTS=false
@@ -43,7 +43,7 @@ Project customization (under .dev/ in the workspace):
                        paths that don't exist are silently skipped.
   .dev/ports           Optional list of -p values, one per line.
   .dev/env             Optional env file passed to docker.
-  .dev/state/          Per-user state (claude/cursor config, bash history) — gitignore.
+  .dev/state/          Per-user state (claude/cursor config+auth, bash history) — gitignore.
   .dev/version         Layout schema version (managed automatically).
 EOF
 }
@@ -114,7 +114,14 @@ load_volumes() {
 }
 
 # Default per-user state under .dev/state/ (trailing / = dir, *.json = {}, else file).
-STATE_ITEMS=(.bash_history .claude/ .claude.json .cursor/)
+# Mount: ./.dev/state/<item> → /home/dev/<item>. Single source of truth for defaults;
+# bump SCHEMA_VERSION when adding items so existing .dev/volumes pick them up.
+STATE_ITEMS=(.bash_history .claude/ .claude.json .cursor/ .config/cursor/)
+
+state_mount_spec() {
+  local item="$1"
+  printf './.dev/state/%s:/home/dev/%s' "$item" "${item%/}"
+}
 
 # Create any missing default state paths. Safe to call when .dev/volumes already
 # exists (e.g. committed by the team while .dev/state/ is gitignored).
@@ -132,17 +139,34 @@ ensure_state_paths() {
   done
 }
 
+# Append any STATE_ITEMS mounts missing from an existing volumes file.
+ensure_state_mounts() {
+  local file="$1"
+  local item mount target
+  [ -f "$file" ] || return 0
+  for item in "${STATE_ITEMS[@]}"; do
+    target="/home/dev/${item%/}"
+    if grep -qF "$target" "$file" 2>/dev/null; then
+      continue
+    fi
+    mount="$(state_mount_spec "$item")"
+    printf '%s\n' "$mount" >> "$file"
+    echo "Added state mount to $file: $mount" >&2
+  done
+}
+
 # First-run setup: write the default volumes file and pre-create the state
 # paths it references. Only invoked when the project uses the devcontainer
-# base image. After this runs once, the file is the source of truth — if a
-# user deletes a state file, the corresponding mount will silently disappear
-# (delete .dev/volumes too to regenerate everything from scratch).
+# base image. After this runs once, extra mounts in the file are kept; new
+# STATE_ITEMS are appended on schema bump via ensure_state_mounts.
 ensure_default_volumes() {
   local file="$1"
   local item
 
   ensure_state_paths
-  [ -f "$file" ] && return 0
+  if [ -f "$file" ]; then
+    return 0
+  fi
 
   cat > "$file" <<'EOF'
 # Paths starting with ~/ are expanded against $HOME.
@@ -152,7 +176,8 @@ ensure_default_volumes() {
 EOF
 
   for item in "${STATE_ITEMS[@]}"; do
-    printf './.dev/state/%s:/home/dev/%s\n' "$item" "${item%/}" >> "$file"
+    state_mount_spec "$item" >> "$file"
+    printf '\n' >> "$file"
   done
 
   cat >> "$file" <<'EOF'
@@ -187,23 +212,6 @@ migrate_v0_to_v1() {
   fi
 }
 
-# Add Cursor Agent state mount for projects that already have .dev/volumes.
-migrate_v1_to_v2() {
-  local dev_dir="$1"
-  local volumes="$dev_dir/volumes"
-  local cursor_state="$dev_dir/state/.cursor"
-  local mount='./.dev/state/.cursor:/home/dev/.cursor'
-
-  mkdir -p "$cursor_state"
-
-  [ -f "$volumes" ] || return 0
-  if grep -qF '.cursor:/home/dev/.cursor' "$volumes" 2>/dev/null; then
-    return 0
-  fi
-  printf '\n# Cursor Agent state\n%s\n' "$mount" >> "$volumes"
-  echo "Added Cursor Agent state mount to $volumes" >&2
-}
-
 run_migrations() {
   local dev_dir="$1"
   local current
@@ -217,7 +225,7 @@ run_migrations() {
   while [ "$current" -lt "$SCHEMA_VERSION" ]; do
     case "$current" in
       0) migrate_v0_to_v1 "$dev_dir" ;;
-      1) migrate_v1_to_v2 "$dev_dir" ;;
+      *) ensure_state_mounts "$dev_dir/volumes" ;;
     esac
     current=$((current + 1))
     echo "$current" > "$dev_dir/version"
