@@ -312,16 +312,17 @@ if [ "$USES_DEVCONTAINER" = true ]; then
         docker exec "$DIND" docker info >/dev/null 2>&1 && break
         sleep 1
       done
-      docker exec "$DIND" docker system prune -af --filter "until=24h" >/dev/null
-      docker exec "$DIND" docker volume prune -af >/dev/null
+      docker exec "$DIND" docker info >/dev/null 2>&1 || exit 0
+      docker exec "$DIND" docker system prune -af --filter "until=24h" >/dev/null 2>&1 || true
+      docker exec "$DIND" docker volume prune -af >/dev/null 2>&1 || true
     ) &
   fi
 
   cleanup() {
     if ! docker ps --filter "name=^dev-" --filter "status=running" \
          --format '{{.Names}}' | grep -qv "^${DIND}$"; then
-      docker stop "$DIND" 2>/dev/null || true
-      docker network rm "$NETWORK" 2>/dev/null || true
+      docker stop "$DIND" >/dev/null 2>&1 || true
+      docker network rm "$NETWORK" >/dev/null 2>&1 || true
     fi
   }
   trap cleanup EXIT
