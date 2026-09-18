@@ -39,8 +39,9 @@ Project customization (under .dev/ in the workspace):
   .dev/Dockerfile      Optional Dockerfile extending the base image
   .dev/volumes         List of -v values, one per line. Auto-generated with
                        sensible defaults on first run. Leading ~/ expands to
-                       \$HOME, leading ./ expands to the project root. Host
-                       paths that don't exist are silently skipped.
+                       \$HOME, leading ./ expands to the project root.
+                       Missing .dev/state/ hosts are created; other missing
+                       host paths are skipped with a warning.
   .dev/ports           Optional list of -p values, one per line.
   .dev/env             Optional env file passed to docker.
   .dev/state/          Per-user state (claude/cursor config+auth, bash history) — gitignore.
@@ -94,49 +95,53 @@ expand_path() {
 }
 
 # Read .dev/volumes: each line is a docker -v spec with leading ~/ and ./
-# expanded against $HOME and the project root. Missing host paths print a
-# warning and are skipped. No side effects on the filesystem.
+# expanded against $HOME and the project root. Missing hosts under .dev/state/
+# are created; other missing hosts are skipped with a warning.
 load_volumes() {
   local file="$1"
   [ -f "$file" ] || return 0
-  local line host rest
+  local line raw_host host rest state_root
+  state_root="$DEV_DIR/state"
   while IFS= read -r line; do
     case "$line" in ''|'#'*) continue ;; esac
-    host="${line%%:*}"
+    raw_host="${line%%:*}"
     rest="${line#*:}"
-    host="$(expand_path "$host")"
+    host="$(expand_path "$raw_host")"
     if [ ! -e "$host" ]; then
-      echo "warning: skipping volume (host path not found): $host" >&2
-      continue
+      case "$host" in
+        "$state_root"|"$state_root"/*)
+          case "$raw_host" in
+            */)
+              mkdir -p "$host"
+              ;;
+            *.json)
+              mkdir -p "$(dirname "$host")"
+              printf '{}' > "$host"
+              ;;
+            *)
+              mkdir -p "$(dirname "$host")"
+              touch "$host"
+              ;;
+          esac
+          ;;
+        *)
+          echo "warning: skipping volume (host path not found): $host" >&2
+          continue
+          ;;
+      esac
     fi
     DOCKER_ARGS+=(-v "$host:$rest")
   done < "$file"
 }
 
 # Default per-user state under .dev/state/ (trailing / = dir, *.json = {}, else file).
-# Mount: ./.dev/state/<item> → /home/dev/<item>. Single source of truth for defaults;
+# Mount: ./.dev/state/<item> → /home/dev/<item>. Used only to seed a new volumes file;
 # bump SCHEMA_VERSION when adding items so existing .dev/volumes pick them up.
 STATE_ITEMS=(.bash_history .claude/ .claude.json .cursor/ .config/cursor/)
 
 state_mount_spec() {
   local item="$1"
   printf './.dev/state/%s:/home/dev/%s' "$item" "${item%/}"
-}
-
-# Create any missing default state paths. Safe to call when .dev/volumes already
-# exists (e.g. committed by the team while .dev/state/ is gitignored).
-ensure_state_paths() {
-  local item host
-  mkdir -p "$DEV_DIR/state"
-  for item in "${STATE_ITEMS[@]}"; do
-    host="$DEV_DIR/state/$item"
-    [ -e "$host" ] && continue
-    case "$item" in
-      */)     mkdir -p "$host" ;;
-      *.json) printf '{}' > "$host" ;;
-      *)      touch "$host" ;;
-    esac
-  done
 }
 
 # Append any STATE_ITEMS mounts missing from an existing volumes file.
@@ -155,18 +160,13 @@ ensure_state_mounts() {
   done
 }
 
-# First-run setup: write the default volumes file and pre-create the state
-# paths it references. Only invoked when the project uses the devcontainer
-# base image. After this runs once, extra mounts in the file are kept; new
-# STATE_ITEMS are appended on schema bump via ensure_state_mounts.
+# Write the default volumes file on first run. Host paths are created later by
+# load_volumes when the mounts are applied.
 ensure_default_volumes() {
   local file="$1"
   local item
 
-  ensure_state_paths
-  if [ -f "$file" ]; then
-    return 0
-  fi
+  [ -f "$file" ] && return 0
 
   cat > "$file" <<'EOF'
 # Paths starting with ~/ are expanded against $HOME.

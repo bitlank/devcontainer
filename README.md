@@ -57,7 +57,7 @@ RUN apt-get update && apt-get install -y <packages> \
 
 One docker `-v` value per line; `#` for comments. Auto-generated on first run with state mounts and `~/.gitconfig`. Edit or comment out lines as needed.
 
-Leading `~/` expands to `$HOME`, leading `./` to the project root. Missing host paths print a warning and are skipped.
+Leading `~/` expands to `$HOME`, leading `./` to the project root. Missing hosts under `.dev/state/` are created on start; other missing host paths print a warning and are skipped.
 
 ```
 ./.dev/state/.bash_history:/home/dev/.bash_history
