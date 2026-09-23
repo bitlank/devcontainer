@@ -31,8 +31,8 @@ RUN install -m 0755 -d /etc/apt/keyrings \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uvx /usr/local/bin/uvx
 
-# Claude Code
-RUN npm install -g @anthropic-ai/claude-code@latest
+# Claude Code + Codex
+RUN npm install -g @anthropic-ai/claude-code@latest @openai/codex@latest
 
 # Lean `dev` user (UID/GID 1000, sudo only). Entrypoint remaps to the host
 # UID/GID at start so bind-mounted project/state dirs are writable.

@@ -25,7 +25,7 @@ fi
 new_uid="$(id -u dev)"
 new_gid="$(id -g dev)"
 if [ "$new_uid" != "$cur_uid" ] || [ "$new_gid" != "$cur_gid" ]; then
-  # -xdev: do not descend into bind mounts under /home/dev (e.g. .cursor, .claude).
+  # -xdev: do not descend into bind mounts under /home/dev (e.g. .cursor, .claude, .codex).
   find /home/dev -xdev -exec chown -h "$new_uid:$new_gid" {} +
 fi
 

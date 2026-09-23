@@ -2,7 +2,7 @@
 set -euo pipefail
 
 BASE_IMAGE="ghcr.io/bitlank/devcontainer:latest"
-SCHEMA_VERSION=3
+SCHEMA_VERSION=4
 
 # Silence Docker CLI "What's next" hints for commands this launcher runs.
 export DOCKER_CLI_HINTS=false
@@ -44,7 +44,7 @@ Project customization (under .dev/ in the workspace):
                        host paths are skipped with a warning.
   .dev/ports           Optional list of -p values, one per line.
   .dev/env             Optional env file passed to docker.
-  .dev/state/          Per-user state (claude/cursor config+auth, bash history) — gitignore.
+  .dev/state/          Per-user state (claude/cursor/codex config+auth, bash history) — gitignore.
   .dev/version         Layout schema version (managed automatically).
 EOF
 }
@@ -137,7 +137,7 @@ load_volumes() {
 # Default per-user state under .dev/state/ (trailing / = dir, *.json = {}, else file).
 # Mount: ./.dev/state/<item> → /home/dev/<item>. Used only to seed a new volumes file;
 # bump SCHEMA_VERSION when adding items so existing .dev/volumes pick them up.
-STATE_ITEMS=(.bash_history .claude/ .claude.json .cursor/ .config/cursor/)
+STATE_ITEMS=(.bash_history .claude/ .claude.json .cursor/ .config/cursor/ .codex/)
 
 state_mount_spec() {
   local item="$1"
