@@ -29,4 +29,10 @@ if [ "$new_uid" != "$cur_uid" ] || [ "$new_gid" != "$cur_gid" ]; then
   find /home/dev -xdev -exec chown -h "$new_uid:$new_gid" {} +
 fi
 
+# Default to an interactive shell when CMD was cleared (e.g. a child image
+# redeclared ENTRYPOINT, which resets CMD to empty in Docker).
+if [ "$#" -eq 0 ]; then
+  set -- bash
+fi
+
 exec runuser -u dev -- "$@"
