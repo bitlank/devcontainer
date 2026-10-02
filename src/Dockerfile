@@ -1,7 +1,10 @@
 FROM ubuntu:26.04
 
-# System packages
-RUN apt-get update && apt-get install -y \
+# Ubuntu 26.04 defaults to Rust coreutils, whose env rejects npm's shebang
+# during arm64 builds under QEMU. Select Ubuntu's GNU coreutils provider.
+RUN apt-get update \
+    && apt-get install -y --allow-remove-essential coreutils-from-gnu coreutils-from-uutils- \
+    && apt-get install -y \
     unzip curl git sudo ca-certificates gnupg lsb-release \
     python3 python3-pip python3-venv \
     ripgrep jq vim file \
