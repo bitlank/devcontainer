@@ -29,6 +29,22 @@ if [ "$new_uid" != "$cur_uid" ] || [ "$new_gid" != "$cur_gid" ]; then
   find /home/dev -xdev -exec chown -h "$new_uid:$new_gid" {} +
 fi
 
+# The mounted state directories hide image-baked user settings. Populate only
+# missing files, as `dev`, so existing settings remain the user's choice.
+seed_config() {
+  local directory="$1" target="$2" template="$3"
+  [ -e "$target" ] && return 0
+  if ! runuser -u dev -- mkdir -p "$directory" \
+      || ! runuser -u dev -- cp -n "$template" "$target"; then
+    echo "warning: could not seed $target" >&2
+  fi
+}
+
+seed_config /home/dev/.claude /home/dev/.claude/settings.json \
+  /etc/devcontainer/claude-settings.json
+seed_config /home/dev/.cursor /home/dev/.cursor/cli-config.json \
+  /etc/devcontainer/cursor-cli-config.json
+
 # Default to an interactive shell when CMD was cleared (e.g. a child image
 # redeclared ENTRYPOINT, which resets CMD to empty in Docker).
 if [ "$#" -eq 0 ]; then

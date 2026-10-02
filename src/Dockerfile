@@ -43,6 +43,10 @@ RUN mkdir -p /etc/codex \
       'approval_policy = "never"' \
       > /etc/codex/config.toml
 
+# Seed user-level defaults at startup; the launcher bind-mounts these state
+# directories, so files created under /home/dev during the build would be hidden.
+COPY claude-settings.json cursor-cli-config.json /etc/devcontainer/
+
 # Lean `dev` user (UID/GID 1000, sudo only). Entrypoint remaps to the host
 # UID/GID at start so bind-mounted project/state dirs are writable.
 RUN userdel -r ubuntu || true \
