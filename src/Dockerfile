@@ -34,6 +34,10 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uvx /usr/local/bin/uvx
 # Claude Code + Codex
 RUN npm install -g @anthropic-ai/claude-code@latest @openai/codex@latest
 
+# Codex is updated with the image, so suppress its in-container update check.
+RUN mkdir -p /etc/codex \
+    && printf 'check_for_update_on_startup = false\n' > /etc/codex/config.toml
+
 # Lean `dev` user (UID/GID 1000, sudo only). Entrypoint remaps to the host
 # UID/GID at start so bind-mounted project/state dirs are writable.
 RUN userdel -r ubuntu || true \
