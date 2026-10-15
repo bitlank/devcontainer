@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [],
+    "deny": []
+  },
+  "version": 1,
+  "approvalMode": "unrestricted",
+  "sandbox": {
+    "mode": "disabled",
+    "networkAccess": "user_config_with_defaults"
+  }
+}

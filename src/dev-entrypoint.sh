@@ -29,6 +29,25 @@ if [ "$new_uid" != "$cur_uid" ] || [ "$new_gid" != "$cur_gid" ]; then
   find /home/dev -xdev -exec chown -h "$new_uid:$new_gid" {} +
 fi
 
+# Seed home-only agent defaults when the bind-mounted state path is empty.
+# System-policy tools (Codex, Claude) are installed under /etc at image build.
+# Create as `dev` (already remapped to HOST_UID) so bind-mounted state dirs
+# aren't left root-owned on the host.
+seed_if_missing() {
+  local src="$1" dest="$2"
+  if [ ! -e "$dest" ]; then
+    runuser -u dev -- mkdir -p "$(dirname "$dest")"
+    runuser -u dev -- cp "$src" "$dest"
+  fi
+}
+
+seed_if_missing \
+  /usr/share/devcontainer/defaults/cursor/cli-config.json \
+  /home/dev/.cursor/cli-config.json
+seed_if_missing \
+  /usr/share/devcontainer/defaults/cursor/workspace-trusted.json \
+  /home/dev/.cursor/projects/workspace/.workspace-trusted
+
 # Default to an interactive shell when CMD was cleared (e.g. a child image
 # redeclared ENTRYPOINT, which resets CMD to empty in Docker).
 if [ "$#" -eq 0 ]; then

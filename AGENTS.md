@@ -5,8 +5,8 @@ Base devcontainer image + launcher scripts, published to GHCR and GitHub Release
 ## Layout
 
 - `src/Dockerfile` — base image (`ghcr.io/bitlank/devcontainer:latest`): Ubuntu 26.04, Node 22, Python + uv, Docker CLI, Claude Code, Codex, Cursor Agent CLI. Lean `dev` user (UID 1000 + sudo); starts as root via entrypoint.
-- `src/defaults/` — agent default configs baked into the image (`/usr/share/devcontainer/defaults/`). System-policy tools (e.g. Codex → `/etc/codex`) are installed at build time; home-only tools can be seed-if-missing from the entrypoint later.
-- `src/dev-entrypoint.sh` — remaps `dev` to `HOST_UID`/`HOST_GID` (groupmod only when GID free), `chown -xdev` on `/home/dev`, then `exec runuser -u dev`.
+- `src/defaults/` — agent default configs baked into the image (`/usr/share/devcontainer/defaults/`). System policy at build time: Codex → `/etc/codex`, Claude → `/etc/claude-code`. Cursor has no `/etc` path; entrypoint seed-if-missing copies `cursor/cli-config.json` (yolo) and trusts `/workspace` via `projects/workspace/.workspace-trusted` when absent.
+- `src/dev-entrypoint.sh` — remaps `dev` to `HOST_UID`/`HOST_GID` (groupmod only when GID free), `chown -xdev` on `/home/dev`, seeds missing home-only defaults, then `exec runuser -u dev`.
 - `src/devcontainer.sh` — launcher that runs the image with a Docker-in-Docker sidecar. **Source of truth for the launcher.** Passes `HOST_UID`/`HOST_GID` from the host.
 - `dev.sh` — thin bootstrap users curl into their project; downloads the latest `devcontainer.sh` release into `.dev/devcontainer.sh` and execs it.
 - `.github/workflows/publish.yaml` — on tag `v*`: builds `src/` for linux/amd64+arm64, pushes to ghcr.io, attaches `src/devcontainer.sh` + `dev.sh` as release assets. No local build/test pipeline — publishing is tag-driven.
