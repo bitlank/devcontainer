@@ -5,6 +5,7 @@ Base devcontainer image + launcher scripts, published to GHCR and GitHub Release
 ## Layout
 
 - `src/Dockerfile` — base image (`ghcr.io/bitlank/devcontainer:latest`): Ubuntu 26.04, Node 22, Python + uv, Docker CLI, Claude Code, Codex, Cursor Agent CLI. Lean `dev` user (UID 1000 + sudo); starts as root via entrypoint.
+- `src/defaults/` — agent default configs baked into the image (`/usr/share/devcontainer/defaults/`). System-policy tools (e.g. Codex → `/etc/codex`) are installed at build time; home-only tools can be seed-if-missing from the entrypoint later.
 - `src/dev-entrypoint.sh` — remaps `dev` to `HOST_UID`/`HOST_GID` (groupmod only when GID free), `chown -xdev` on `/home/dev`, then `exec runuser -u dev`.
 - `src/devcontainer.sh` — launcher that runs the image with a Docker-in-Docker sidecar. **Source of truth for the launcher.** Passes `HOST_UID`/`HOST_GID` from the host.
 - `dev.sh` — thin bootstrap users curl into their project; downloads the latest `devcontainer.sh` release into `.dev/devcontainer.sh` and execs it.

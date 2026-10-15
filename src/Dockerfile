@@ -37,14 +37,12 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uvx /usr/local/bin/uvx
 # Claude Code + Codex
 RUN npm install -g @anthropic-ai/claude-code@latest @openai/codex@latest
 
+# Agent defaults (system policy under /etc — not covered by .dev/state mounts).
 # Docker provides the sandbox boundary; Codex's inner bubblewrap sandbox cannot
-# start under the default container security profile. Codex updates with the image.
+# start under the default container security profile.
+COPY defaults/ /usr/share/devcontainer/defaults/
 RUN mkdir -p /etc/codex \
-    && printf '%s\n' \
-      'check_for_update_on_startup = false' \
-      'sandbox_mode = "danger-full-access"' \
-      'approval_policy = "never"' \
-      > /etc/codex/config.toml
+    && cp /usr/share/devcontainer/defaults/codex/config.toml /etc/codex/config.toml
 
 # Lean `dev` user (UID/GID 1000, sudo only). Entrypoint remaps to the host
 # UID/GID at start so bind-mounted project/state dirs are writable.
